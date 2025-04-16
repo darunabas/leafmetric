@@ -9,7 +9,7 @@ from ultralytics import YOLO
 # Configuration
 UPLOAD_FOLDER = "uploads"
 OUTPUT_FOLDER = "outputs"
-MODEL_PATH = "/Users/bdaru/Dropbox/Projects/Stanford/publications/30_Functional_biogeography/DATABASE/OUTPUT/leaf_area_segmentation/runs/segment/train/weights/best.pt"
+MODEL_PATH = "models/best.pt"
 
 # Ensure directories exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
