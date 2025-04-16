@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Leaf Area Predictor</title>
+  <style>
+  @media (max-width: 600px) {
+  .result-card {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .result-card img {
+    width: 100%;
+    max-width: 300px;
+  }
+}
+
+    body {
+      padding-top: 100px;
+      font-family: sans-serif;
+    }
+
+    #logo-container {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+    }
+
+    #logo {
+      height: 100px;
+      width: auto;
+    }
+
+    .result-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 30px;
+      margin-top: 2em;
+    }
+
+.result-card {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1 0 400px;
+  max-width: 500px;
+  border: 1px solid #ddd;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f8f8f8;
+}
+
+.result-card img {
+  width: 150px;
+  height: auto;
+  border-radius: 4px;
+  object-fit: contain;
+}
+
+.result-content {
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+  </style>
+</head>
+<body>
+
+  <div id="logo-container">
+    <img src="{{ url_for('static', filename='leafmetric-logo.png') }}" id="logo">
+  </div>
+
+  <h2>Upload Leaf Images</h2>
+  <form id="uploadForm" enctype="multipart/form-data">
+    <input type="file" name="images" id="imageInput" accept="image/*" multiple><br><br>
+
+    <label for="threshold">Confidence Threshold: <span id="threshVal">0.7</span></label><br>
+    <input type="range" name="threshold" id="threshold" min="0.1" max="1" step="0.05" value="0.7"><br><br>
+
+    <button type="submit">Predict</button>
+  </form>
+
+  <hr>
+
+  <div class="result-container" id="resultsGrid"></div>
+
+  <script>
+  const thresholdInput = document.getElementById('threshold');
+  const threshVal = document.getElementById('threshVal');
+  const form = document.getElementById('uploadForm');
+  const imageInput = document.getElementById('imageInput');
+  const resultsGrid = document.getElementById('resultsGrid');
+
+  let uploadedFilenames = [];
+
+  // Update threshold display
+  thresholdInput.addEventListener('input', function () {
+  const threshold = parseFloat(thresholdInput.value).toFixed(2);
+  threshVal.textContent = threshold;
+
+  if (uploadedFilenames.length > 0) {
+    const thresholdVal = parseFloat(thresholdInput.value).toFixed(2);
+
+    uploadedFilenames.forEach((filename) => {
+      const formData = new FormData();
+      formData.append('threshold', thresholdVal);
+      formData.append('filename', filename);
+
+      fetch('/recalculate', {
+        method: 'POST',
+        body: formData
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          let card = document.getElementById(`card-${filename}`);
+
+          if (!card) {
+            // First-time creation
+            card = document.createElement('div');
+            card.id = `card-${filename}`;
+            card.className = 'result-card';
+            resultsGrid.appendChild(card);
+          } else {
+            card.innerHTML = ''; // Clear previous content
+          }
+
+          if (data.error) {
+            card.innerHTML = `<strong>${filename}:</strong><br><span style="color:red">${data.error}</span>`;
+          } else {
+            const img = document.createElement('img');
+            img.src = 'data:image/jpeg;base64,' + data.image;
+
+            const content = document.createElement('div');
+            content.className = 'result-content';
+            content.innerHTML = `<strong>${filename}</strong><br>` +
+              data.areas.map((a, j) => `Leaf ${j + 1}: ${a} cm²`).join('<br>');
+
+            card.appendChild(img);
+            card.appendChild(content);
+          }
+        });
+    });
+  }
+});
+
+  form.addEventListener('submit', function (event) {
+    event.preventDefault();
+
+    const files = imageInput.files;
+    const threshold = thresholdInput.value;
+
+    if (!files.length) {
+      alert("Please select at least one image.");
+      return;
+    }
+
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      formData.append('images', files[i]);
+    }
+    formData.append('threshold', threshold);
+
+    fetch('/predict', {
+      method: 'POST',
+      body: formData
+    })
+      .then(response => response.json())
+      .then(data => {
+        resultsGrid.innerHTML = '';
+        uploadedFilenames = [];
+
+        if (Array.isArray(data)) {
+          data.forEach(item => {
+            uploadedFilenames.push(item.filename); // Save for later use
+
+            const card = document.createElement('div');
+            card.className = 'result-card';
+            card.id = `card-${item.filename}`;
+
+            if (item.error) {
+              card.innerHTML = `<strong>${item.filename}:</strong><br><span style="color:red">${item.error}</span>`;
+            } else {
+              const img = document.createElement('img');
+              img.src = 'data:image/jpeg;base64,' + item.image;
+
+              const content = document.createElement('div');
+              content.className = 'result-content';
+              content.innerHTML = `<strong>${item.filename}</strong><br>` +
+                item.areas.map((a, j) => `Leaf ${j + 1}: ${a} cm²`).join('<br>');
+
+              card.appendChild(img);
+              card.appendChild(content);
+            }
+
+            resultsGrid.appendChild(card);
+          });
+        } else {
+          alert("Unexpected server response format.");
+        }
+      })
+      .catch(error => {
+        alert("Error: " + (error.message || error));
+        console.error(error);
+      });
+  });
+</script>
+
+</body>
+</html>
