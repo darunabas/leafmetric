@@ -102,6 +102,7 @@ def predict():
                 'filename': file.filename,
                 'areas': areas
             })
+            
 
         except Exception as e:
             responses.append({
