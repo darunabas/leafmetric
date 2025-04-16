@@ -6,10 +6,19 @@ import cv2
 from flask import Flask, request, render_template, jsonify, make_response
 from ultralytics import YOLO
 
+# Download model if needed
+MODEL_URL = "https://www.dropbox.com/scl/fi/txdy81ui02rzxmfu1fghw/best.pt?rlkey=k8cpkoe2qur9is5wr2j1erwbx&dl=1"
+MODEL_PATH = "models/best.pt"
+
+if not os.path.exists(MODEL_PATH):
+    print("Downloading model...")
+    os.makedirs("models", exist_ok=True)
+    with open(MODEL_PATH, 'wb') as f:
+        f.write(requests.get(MODEL_URL).content)
+
 # Configuration
 UPLOAD_FOLDER = "uploads"
 OUTPUT_FOLDER = "outputs"
-MODEL_PATH = "models/best.pt"
 
 # Ensure directories exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
