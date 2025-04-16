@@ -3,19 +3,22 @@ import base64
 import json
 import numpy as np
 import cv2
+import requests  # <- You missed this!
 from flask import Flask, request, render_template, jsonify, make_response
 from ultralytics import YOLO
 
 # Download model if needed
-MODEL_URL = "https://www.dropbox.com/scl/fi/txdy81ui02rzxmfu1fghw/best.pt?rlkey=k8cpkoe2qur9is5wr2j1erwbx&dl=1"
+MODEL_URL = "https://www.dl.dropboxusercontent.com/scl/fi/txdy81ui02rzxmfu1fghw/best.pt?rlkey=k8cpkoe2qur9is5wr2j1erwbx&dl=1"
 MODEL_PATH = "models/best.pt"
 
 if not os.path.exists(MODEL_PATH):
     print("Downloading model...")
     os.makedirs("models", exist_ok=True)
+    response = requests.get(MODEL_URL)
     with open(MODEL_PATH, 'wb') as f:
-        f.write(requests.get(MODEL_URL).content)
-
+        f.write(response.content)
+    print(f"Downloaded {len(response.content) / (1024 * 1024):.2f} MB")
+    
 # Configuration
 UPLOAD_FOLDER = "uploads"
 OUTPUT_FOLDER = "outputs"
@@ -148,5 +151,4 @@ def recalculate():
         return jsonify({'error': str(e)})
 
 if __name__ == '__main__':
-    from waitress import serve
-    serve(app, host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5050, debug=True)
